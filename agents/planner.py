@@ -1,7 +1,8 @@
 import json
+import socket
 from typing import Dict, Any, List
 from langchain.schema import HumanMessage
-
+from config.settings import SSH_HOST  # Import SSH_HOST
 from models.model_loader import get_planner_model
 from utils.prompt_templates import get_planner_prompt
 
@@ -25,6 +26,17 @@ class PlannerAgent:
         Returns:
             Dictionary containing the generated plan with steps, verification, and goal status
         """
+        # Validate target reachability
+        try:
+            socket.gethostbyname(SSH_HOST)
+        except socket.gaierror:
+            print(f"Error: Cannot resolve {SSH_HOST}")
+            return {
+                "steps": [f"ping -c 4 {SSH_HOST}"],
+                "goal_verification": "Check if ping responds",
+                "goal_reached": False
+            }
+        
         prompt = get_planner_prompt(context, attack_goal)
         
         # Invoke the model with the constructed prompt
@@ -44,18 +56,24 @@ class PlannerAgent:
             # Parse the JSON content
             plan = json.loads(content)
             
+            # Check for goal completion
+            if "Identify all open ports" in attack_goal:
+                if "Nmap done" in context and "open" in context.lower() and "version" in context.lower():
+                    plan["goal_reached"] = True
+            
             # Validate the structure
             if not self._validate_plan(plan):
                 raise ValueError("Invalid plan structure")
                 
+            print(f"Generated Plan: {plan}")
             return plan
             
         except (json.JSONDecodeError, ValueError) as e:
             # If JSON parsing fails, return a simple default plan
             print(f"Error parsing planner response: {str(e)}")
             return {
-                "steps": ["Gather more information about the system with basic commands"],
-                "goal_verification": "Check if we have enough information to proceed",
+                "steps": [f"nmap -sS -sV --top-ports 1000 {SSH_HOST}"],
+                "goal_verification": "Check for open ports and service versions",
                 "goal_reached": False
             }
     

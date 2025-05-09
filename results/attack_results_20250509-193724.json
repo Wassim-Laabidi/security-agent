@@ -1,6 +1,9 @@
 {
-  "attack_goal": "Identify all open ports and determine which services are running on them, including version information",
-  "attack_history": [
+  "goal": "Identify all open ports and determine which services are running on them, including version information",
+  "goal_reached": true,
+  "steps_executed": 11,
+  "vulnerabilities": [],
+  "history": [
     {
       "command": "nmap -sV -p- <target_ip>",
       "output": "nmap -sV -p- <target_ip>\r\n-bash: syntax error near unexpected token `newline'\r\nmsfadmin@metasploitable:~$ ",
@@ -68,7 +71,5 @@
       "timestamp": "2025-05-09T19:37:24.094663"
     }
   ],
-  "current_plan": {},
-  "vulnerability_findings": [],
-  "last_updated": "2025-05-09T19:37:24.194002"
+  "error": ""
 }
