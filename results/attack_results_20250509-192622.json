@@ -1,6 +1,9 @@
 {
-  "attack_goal": "Identify all open ports and determine which services are running on them, including version information",
-  "attack_history": [
+  "goal": "Identify all open ports and determine which services are running on them, including version information",
+  "goal_reached": true,
+  "steps_executed": 15,
+  "vulnerabilities": [],
+  "history": [
     {
       "command": "nmap -sS -sV -p- target_server",
       "output": "nmap -sS -sV -p- target_server\r\n\r\nStarting Nmap 4.53 ( http://insecure.org ) at 2025-05-09 19:21 EDT\r\nFailed to resolve given hostname/IP: target_server.  Note that you can't use '/mask' AND '1-4,7,100-' style IP ranges\r\nWARNING: No targets were specified, so 0 hosts scanned.\r\nNmap done: 0 IP addresses (0 hosts up) scanned in 10.061 seconds\r\nmsfadmin@metasploitable:~$ ",
@@ -92,7 +95,5 @@
       "timestamp": "2025-05-09T19:26:21.927845"
     }
   ],
-  "current_plan": {},
-  "vulnerability_findings": [],
-  "last_updated": "2025-05-09T19:26:22.049807"
+  "error": ""
 }

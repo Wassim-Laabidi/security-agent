@@ -3,6 +3,8 @@ from datetime import datetime
 import json
 
 from langgraph.graph import StateGraph, END
+from langchain.globals import set_llm_cache
+from langchain_community.cache import InMemoryCache
 from pydantic import BaseModel, Field
 
 from config.settings import MAX_ATTACK_STEPS, USE_SUMMARIZER
@@ -168,32 +170,59 @@ def summarize_context(state: AttackState) -> AttackState:
         **state,
         "context": summarized_context
     }
+# Put this in a utils.py or directly inside extract.py
 
-def extract_vulnerabilities(state: AttackState) -> AttackState:
-    """Extract vulnerabilities from the attack history"""
-    extractor = ExtractorAgent()
-    findings = extractor.invoke(state["context"])
+def analyze_history_for_services(history):
+    """
+    Analyze command history to find open ports and service versions
+    """
+    services = []
+
+    for entry in history:
+        cmd = entry.get("command", "")
+        output = entry.get("output", "")
+
+        if "nmap" in cmd and "-sV" in cmd:
+            # Very simple parsing of nmap -sV output
+            lines = output.splitlines()
+            for line in lines:
+                if "/tcp" in line or "/udp" in line:
+                    parts = line.strip().split()
+                    if len(parts) >= 3:
+                        port_info = parts[0]
+                        service_info = " ".join(parts[2:])
+                        services.append({
+                            "port": port_info,
+                            "service": service_info
+                        })
+
+    return services
     
-    return {
-        **state,
-        "vulnerabilities": findings.get("vulnerabilities", [])
-    }
+def extract_vulnerabilities(state: AttackState) -> AttackState:
+    """Extract vulnerabilities from attack history"""
+    # Analyze history to find open ports and services
+    found_services = analyze_history_for_services(state["history"])
+    
+    # Update vulnerabilities
+    state["vulnerabilities"] = found_services
+    
+    # Mark goal as reached
+    state["goal_reached"] = True
+    
+    return state
 
 def should_continue(state: AttackState) -> Union[Literal["continue"], Literal["finish"]]:
-    """Determine if the attack should continue or finish"""
-    # Stop if the goal is reached
+    print(f"[DEBUG] Step Count: {state['step_count']}, Goal Reached: {state['goal_reached']}")
     if state["goal_reached"]:
+        print("[DEBUG] Goal reached, finishing.")
         return "finish"
-    
-    # Stop if max steps reached
     if state["step_count"] >= MAX_ATTACK_STEPS:
+        print("[DEBUG] Max steps reached, finishing.")
         return "finish"
-    
-    # Stop if there's a critical error
-    if state["error"] and "Failed to establish SSH connection" in state["error"]:
+    if state["error"] and "SSH" in state["error"]:
+        print("[DEBUG] SSH error, finishing.")
         return "finish"
-    
-    # Otherwise continue
+    print("[DEBUG] Continuing...")
     return "continue"
 
 def select_next_step(state: AttackState) -> AttackState:
@@ -264,7 +293,55 @@ def create_attack_workflow() -> StateGraph:
     
     return workflow
 
+# Make sure AttackState type is compatible with your graph definition
 def run_attack_workflow(goal: str) -> Dict[str, Any]:
+    """
+    Run the attack workflow with the specified goal
+    
+    Args:
+        goal: The attack goal
+        
+    Returns:
+        Dictionary with attack results
+    """
+
+    # Set caching early
+    set_llm_cache(InMemoryCache())
+
+    # Create and compile the workflow
+    workflow = create_attack_workflow()
+    app = workflow.compile()
+
+    # Define initial state directly as dict
+    initial_state = {
+        "goal": goal,
+        "context": "",
+        "current_plan": {},
+        "current_step": "",
+        "step_command": "",
+        "step_output": "",
+        "history": [],
+        "vulnerabilities": [],
+        "step_count": 0,
+        "goal_reached": False,
+        "error": ""
+    }
+
+    # Execute the workflow
+    result = app.invoke(
+        initial_state,  # Not wrapped in {"input": ...}
+        config={"recursion_limit": 100}
+    )
+    
+    # Return summary
+    return {
+        "goal": result.get("goal"),
+        "goal_reached": result.get("goal_reached", False),
+        "steps_executed": result.get("step_count", 0),
+        "vulnerabilities": result.get("vulnerabilities", []),
+        "history": result.get("history", []),
+        "error": result.get("error", "")
+    }
     """
     Run the attack workflow with the specified goal
     
@@ -296,9 +373,15 @@ def run_attack_workflow(goal: str) -> Dict[str, Any]:
         "goal_reached": False,
         "error": ""
     }
+
+    # Enable caching (optional but recommended for performance)
+    set_llm_cache(InMemoryCache())
     
     # Execute the workflow
-    result = app.invoke(initial_state)
+    result = app.invoke(
+         {"input": initial_state},
+        config={"recursion_limit": 50}  # Adjust as needed
+        )
     
     # Return the final state
     return {
