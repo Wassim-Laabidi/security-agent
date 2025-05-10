@@ -2,3 +2,9 @@
 ssh_client.log
 attack_context.json
 results/
+attack_results/
+utils/__pycache__
+workflows/__pycache__
+agents/__pycache__
+models/__pycache__
+config/__pycache__

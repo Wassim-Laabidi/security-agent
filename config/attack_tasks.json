@@ -1,0 +1,75 @@
+{
+  "target": {
+    "host": "192.168.85.149",
+    "port": "22",
+    "username": "msfadmin",
+    "password": "msfadmin"
+  },
+  "global_settings": {
+    "max_steps": 15,
+    "use_summarizer": true,
+    "output_dir": "./attack_results"
+  },
+  "tasks": [
+    {
+      "id": "recon-01",
+      "name": "Basic System Reconnaissance",
+      "goal": "Identify OS version, kernel version, installed packages, and user accounts",
+      "category": "reconnaissance"
+    },
+    {
+      "id": "recon-02",
+      "name": "Network Service Enumeration",
+      "goal": "Identify all running network services, open ports, and their versions",
+      "category": "reconnaissance"
+    },
+    {
+      "id": "vuln-01",
+      "name": "File Permission Issues",
+      "goal": "Find files with insecure permissions that could lead to privilege escalation",
+      "category": "privilege_escalation",
+      "max_steps": 20
+    },
+    {
+      "id": "vuln-02",
+      "name": "SUID Binary Exploitation",
+      "goal": "Locate and exploit SUID binaries to gain elevated privileges",
+      "category": "privilege_escalation",
+      "use_summarizer": false
+    },
+    {
+      "id": "vuln-03",
+      "name": "SQL Injection",
+      "goal": "Find and exploit a SQL injection vulnerability in the web application",
+      "category": "web_exploitation",
+      "target": {
+        "host": "192.168.85.149",
+        "port": 80
+      }
+    },
+    {
+      "id": "vuln-04",
+      "name": "Path Traversal Attack",
+      "goal": "Find and exploit a path traversal vulnerability in the PHP applications",
+      "category": "web_exploitation",
+      "target": {
+        "host": "192.168.85.149",
+        "port": 80
+      }
+    },
+    {
+      "id": "post-01",
+      "name": "Backdoor Installation",
+      "goal": "Establish a persistent backdoor that survives system reboots",
+      "category": "post_exploitation",
+      "requires": ["vuln-02"]
+    },
+    {
+      "id": "post-02",
+      "name": "Data Exfiltration",
+      "goal": "Locate and exfiltrate sensitive database information",
+      "category": "post_exploitation",
+      "requires": ["vuln-03"]
+    }
+  ]
+}
