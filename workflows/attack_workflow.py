@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Tuple, TypedDict, Annotated, Union, Literal
+from typing import Dict, Any, List, Tuple, TypedDict, Annotated, Union, Literal, Optional
 from datetime import datetime
 import json
 
@@ -14,7 +14,6 @@ from agents.summarizer import SummarizerAgent
 from agents.extractor import ExtractorAgent
 from utils.ssh_client import SSHClient
 from utils.context_manager import ContextManager
-
 
 # Define the state for our workflow
 class AttackState(TypedDict):
@@ -294,19 +293,32 @@ def create_attack_workflow() -> StateGraph:
     return workflow
 
 # Make sure AttackState type is compatible with your graph definition
-def run_attack_workflow(goal: str) -> Dict[str, Any]:
+def run_attack_workflow(
+    goal: str,
+    context_manager: Optional[ContextManager] = None,
+    verbose: bool = False,
+    max_steps: Optional[int] = None
+) -> Dict[str, Any]:
     """
     Run the attack workflow with the specified goal
     
     Args:
         goal: The attack goal
+        context_manager: Optional ContextManager instance to use
+        verbose: Whether to enable verbose output
+        max_steps: Maximum number of steps to execute
         
     Returns:
         Dictionary with attack results
     """
-
     # Set caching early
     set_llm_cache(InMemoryCache())
+
+    # Create or use provided context manager
+    internal_context = context_manager is None
+    if internal_context:
+        context_manager = ContextManager()
+    context_manager.set_attack_goal(goal)
 
     # Create and compile the workflow
     workflow = create_attack_workflow()
@@ -329,10 +341,17 @@ def run_attack_workflow(goal: str) -> Dict[str, Any]:
 
     # Execute the workflow
     result = app.invoke(
-        initial_state,  # Not wrapped in {"input": ...}
+        initial_state,
         config={"recursion_limit": 100}
     )
-    
+
+    # If we created the context manager internally, save final state
+    if internal_context:
+        for step in result.get("history", []):
+            context_manager.add_attack_step(step)
+        for vuln in result.get("vulnerabilities", []):
+            context_manager.add_vulnerability(vuln)
+
     # Return summary
     return {
         "goal": result.get("goal"),
@@ -342,53 +361,101 @@ def run_attack_workflow(goal: str) -> Dict[str, Any]:
         "history": result.get("history", []),
         "error": result.get("error", "")
     }
-    """
-    Run the attack workflow with the specified goal
+# def run_attack_workflow(goal: str) -> Dict[str, Any]:
+#     """
+#     Run the attack workflow with the specified goal
     
-    Args:
-        goal: The attack goal
+#     Args:
+#         goal: The attack goal
         
-    Returns:
-        Dictionary with attack results
-    """
+#     Returns:
+#         Dictionary with attack results
+#     """
 
-    # Create the workflow
-    workflow = create_attack_workflow()
+#     # Set caching early
+#     set_llm_cache(InMemoryCache())
+
+#     # Create and compile the workflow
+#     workflow = create_attack_workflow()
+#     app = workflow.compile()
+
+#     # Define initial state directly as dict
+#     initial_state = {
+#         "goal": goal,
+#         "context": "",
+#         "current_plan": {},
+#         "current_step": "",
+#         "step_command": "",
+#         "step_output": "",
+#         "history": [],
+#         "vulnerabilities": [],
+#         "step_count": 0,
+#         "goal_reached": False,
+#         "error": ""
+#     }
+
+#     # Execute the workflow
+#     result = app.invoke(
+#         initial_state,  # Not wrapped in {"input": ...}
+#         config={"recursion_limit": 100}
+#     )
     
-    # Compile the workflow
-    app = workflow.compile()
+#     # Return summary
+#     return {
+#         "goal": result.get("goal"),
+#         "goal_reached": result.get("goal_reached", False),
+#         "steps_executed": result.get("step_count", 0),
+#         "vulnerabilities": result.get("vulnerabilities", []),
+#         "history": result.get("history", []),
+#         "error": result.get("error", "")
+#     }
+#     """
+#     Run the attack workflow with the specified goal
+    
+#     Args:
+#         goal: The attack goal
+        
+#     Returns:
+#         Dictionary with attack results
+#     """
+
+#     # Create the workflow
+#     workflow = create_attack_workflow()
+    
+#     # Compile the workflow
+#     app = workflow.compile()
 
     
-    # Run the workflow with the initial state
-    initial_state: AttackState = {
-        "goal": goal,
-        "context": "",
-        "current_plan": {},
-        "current_step": "",
-        "step_command": "",
-        "step_output": "",
-        "history": [],
-        "vulnerabilities": [],
-        "step_count": 0,
-        "goal_reached": False,
-        "error": ""
-    }
+#     # Run the workflow with the initial state
+#     initial_state: AttackState = {
+#         "goal": goal,
+#         "context": "",
+#         "current_plan": {},
+#         "current_step": "",
+#         "step_command": "",
+#         "step_output": "",
+#         "history": [],
+#         "vulnerabilities": [],
+#         "step_count": 0,
+#         "goal_reached": False,
+#         "error": ""
+#     }
 
-    # Enable caching (optional but recommended for performance)
-    set_llm_cache(InMemoryCache())
+#     # Enable caching (optional but recommended for performance)
+#     set_llm_cache(InMemoryCache())
     
-    # Execute the workflow
-    result = app.invoke(
-         {"input": initial_state},
-        config={"recursion_limit": 50}  # Adjust as needed
-        )
+#     # Execute the workflow
+#     result = app.invoke(
+#          {"input": initial_state},
+#         config={"recursion_limit": 50}  # Adjust as needed
+#         )
     
-    # Return the final state
-    return {
-        "goal": goal,
-        "goal_reached": result["goal_reached"],
-        "steps_executed": result["step_count"],
-        "vulnerabilities": result["vulnerabilities"],
-        "history": result["history"],
-        "error": result["error"]
-    }
+#     # Return the final state
+#     return {
+#         "goal": goal,
+#         "goal_reached": result["goal_reached"],
+#         "steps_executed": result["step_count"],
+#         "vulnerabilities": result["vulnerabilities"],
+#         "history": result["history"],
+#         "error": result["error"]
+#     }

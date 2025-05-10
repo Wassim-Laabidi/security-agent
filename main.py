@@ -86,7 +86,12 @@ def run_attack_with_progress(goal: str, verbose: bool = False, max_steps: Option
         
         try:
             # Call run_attack_workflow with only the parameters it accepts
-            results = run_attack_workflow(goal=goal)
+            results = run_attack_workflow(
+                goal=goal,
+                context_manager=context_manager,
+                verbose=verbose,
+                max_steps=max_steps
+            )
             
             # After getting results, update the context manager
             for step in results['history']:
