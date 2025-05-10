@@ -24,7 +24,7 @@ SSH_OPTIONS = os.getenv("SSH_OPTIONS", "HostKeyAlgorithms=+ssh-rsa")
 # Model Settings
 PLANNER_MODEL = os.getenv("PLANNER_MODEL", "gpt-4o")  # For complex planning tasks
 INTERPRETER_MODEL = os.getenv("INTERPRETER_MODEL", "gpt-4o")  # For command generation
-SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gpt-4o")  # For context summarization
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gpt-4")  # For context summarization
 EXTRACTOR_MODEL = os.getenv("EXTRACTOR_MODEL", "gpt-4o")  # For vulnerability remediation
 
 # Context Settings
