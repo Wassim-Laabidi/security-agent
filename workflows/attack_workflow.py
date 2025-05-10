@@ -28,6 +28,7 @@ class AttackState(TypedDict):
     step_count: int
     goal_reached: bool
     error: str
+    max_steps: Optional[int]  # Added max_steps to the state
 
 # Node implementations
 def initialize_attack(state: AttackState) -> AttackState:
@@ -169,7 +170,6 @@ def summarize_context(state: AttackState) -> AttackState:
         **state,
         "context": summarized_context
     }
-# Put this in a utils.py or directly inside extract.py
 
 def analyze_history_for_services(history):
     """
@@ -211,12 +211,16 @@ def extract_vulnerabilities(state: AttackState) -> AttackState:
     return state
 
 def should_continue(state: AttackState) -> Union[Literal["continue"], Literal["finish"]]:
-    print(f"[DEBUG] Step Count: {state['step_count']}, Goal Reached: {state['goal_reached']}")
+    # Use the max_steps from state if provided, otherwise fall back to the constant
+    effective_max_steps = state.get("max_steps") or MAX_ATTACK_STEPS
+    
+    print(f"[DEBUG] Step Count: {state['step_count']}, Goal Reached: {state['goal_reached']}, Max Steps: {effective_max_steps}")
+    
     if state["goal_reached"]:
         print("[DEBUG] Goal reached, finishing.")
         return "finish"
-    if state["step_count"] >= MAX_ATTACK_STEPS:
-        print("[DEBUG] Max steps reached, finishing.")
+    if state["step_count"] >= effective_max_steps:
+        print(f"[DEBUG] Max steps ({effective_max_steps}) reached, finishing.")
         return "finish"
     if state["error"] and "SSH" in state["error"]:
         print("[DEBUG] SSH error, finishing.")
@@ -320,6 +324,10 @@ def run_attack_workflow(
         context_manager = ContextManager()
     context_manager.set_attack_goal(goal)
 
+    # Log if max_steps is specified
+    if max_steps is not None:
+        print(f"[INFO] Using custom max_steps: {max_steps} instead of default: {MAX_ATTACK_STEPS}")
+
     # Create and compile the workflow
     workflow = create_attack_workflow()
     app = workflow.compile()
@@ -336,13 +344,14 @@ def run_attack_workflow(
         "vulnerabilities": [],
         "step_count": 0,
         "goal_reached": False,
-        "error": ""
+        "error": "",
+        "max_steps": max_steps  # Add max_steps to the initial state
     }
 
     # Execute the workflow
     result = app.invoke(
         initial_state,
-        config={"recursion_limit": 100}
+        config={"recursion_limit": 200}
     )
 
     # If we created the context manager internally, save final state
@@ -361,101 +370,3 @@ def run_attack_workflow(
         "history": result.get("history", []),
         "error": result.get("error", "")
     }
-# def run_attack_workflow(goal: str) -> Dict[str, Any]:
-#     """
-#     Run the attack workflow with the specified goal
-    
-#     Args:
-#         goal: The attack goal
-        
-#     Returns:
-#         Dictionary with attack results
-#     """
-
-#     # Set caching early
-#     set_llm_cache(InMemoryCache())
-
-#     # Create and compile the workflow
-#     workflow = create_attack_workflow()
-#     app = workflow.compile()
-
-#     # Define initial state directly as dict
-#     initial_state = {
-#         "goal": goal,
-#         "context": "",
-#         "current_plan": {},
-#         "current_step": "",
-#         "step_command": "",
-#         "step_output": "",
-#         "history": [],
-#         "vulnerabilities": [],
-#         "step_count": 0,
-#         "goal_reached": False,
-#         "error": ""
-#     }
-
-#     # Execute the workflow
-#     result = app.invoke(
-#         initial_state,  # Not wrapped in {"input": ...}
-#         config={"recursion_limit": 100}
-#     )
-    
-#     # Return summary
-#     return {
-#         "goal": result.get("goal"),
-#         "goal_reached": result.get("goal_reached", False),
-#         "steps_executed": result.get("step_count", 0),
-#         "vulnerabilities": result.get("vulnerabilities", []),
-#         "history": result.get("history", []),
-#         "error": result.get("error", "")
-#     }
-#     """
-#     Run the attack workflow with the specified goal
-    
-#     Args:
-#         goal: The attack goal
-        
-#     Returns:
-#         Dictionary with attack results
-#     """
-
-#     # Create the workflow
-#     workflow = create_attack_workflow()
-    
-#     # Compile the workflow
-#     app = workflow.compile()
-
-    
-#     # Run the workflow with the initial state
-#     initial_state: AttackState = {
-#         "goal": goal,
-#         "context": "",
-#         "current_plan": {},
-#         "current_step": "",
-#         "step_command": "",
-#         "step_output": "",
-#         "history": [],
-#         "vulnerabilities": [],
-#         "step_count": 0,
-#         "goal_reached": False,
-#         "error": ""
-#     }
-
-#     # Enable caching (optional but recommended for performance)
-#     set_llm_cache(InMemoryCache())
-    
-#     # Execute the workflow
-#     result = app.invoke(
-#          {"input": initial_state},
-#         config={"recursion_limit": 50}  # Adjust as needed
-#         )
-    
-#     # Return the final state
-#     return {
-#         "goal": goal,
-#         "goal_reached": result["goal_reached"],
-#         "steps_executed": result["step_count"],
-#         "vulnerabilities": result["vulnerabilities"],
-#         "history": result["history"],
-#         "error": result["error"]
-#     }
