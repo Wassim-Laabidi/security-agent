@@ -21,18 +21,18 @@ console = Console()
 def print_banner():
     """Print the application banner"""
     banner = """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║   █████╗ ██╗   ██╗████████╗ ██████╗  █████╗ ████████╗████████╗ █████╗  ██████╗██╗  ██╗
-    ║  ██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗██╔══██╗╚══██╔══╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ║  ███████║██║   ██║   ██║   ██║   ██║███████║   ██║      ██║   ███████║██║     █████╔╝ 
-    ║  ██╔══██║██║   ██║   ██║   ██║   ██║██╔══██║   ██║      ██║   ██╔══██║██║     ██╔═██╗ 
-    ║  ██║  ██║╚██████╔╝   ██║   ╚██████╔╝██║  ██║   ██║      ██║   ██║  ██║╚██████╗██║  ██╗
-    ║  ╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-    ║                                                           ║
-    ║             Autonomous Security Testing Agent            ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║     ██╗  █████╗ ███████╗ ██████╗ ██╗███████╗██╗  ██╗                        ║
+║    ███║ ██╔══██╗██╔════╝██╔════╝ ██║██╔════╝╚██╗██╔╝                        ║
+║    ╚██║ ███████║█████╗  ██║  ███╗██║███████╗ ╚███╔╝                         ║
+║     ██║ ██╔══██║██╔══╝  ██║   ██║██║╚════██║ ██╔██╗                         ║
+║     ██║ ██║  ██║███████╗╚██████╔╝██║███████║██╔╝ ██╗                        ║
+║     ╚═╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝╚═╝  ╚═╝                        ║
+║                                                                              ║
+║             Autonomous Security Testing Agent                                ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(banner, border_style="red"))
 
@@ -105,32 +105,6 @@ def run_attack_with_progress(goal: str, verbose: bool = False, max_steps: Option
             progress.update(task, completed=True, description="[red]Security test failed!")
             console.print(f"[red]Error: {str(e)}[/red]")
             return None
-# def run_attack_with_progress(goal: str, verbose: bool = False, max_steps: Optional[int] = None):
-#     """Run the attack workflow with a progress indicator"""
-#     context_manager = ContextManager()
-#     context_manager.set_attack_goal(goal)
-    
-#     with Progress(
-#         SpinnerColumn(),
-#         TextColumn("[bold blue]{task.description}"),
-#         transient=True,
-#     ) as progress:
-#         task = progress.add_task("[green]Running security test...", total=None)
-        
-#         try:
-#             results = run_attack_workflow(
-#                 goal=goal,
-#                 context_manager=context_manager,
-#                 verbose=verbose,
-#                 max_steps=max_steps
-#             )
-            
-#             progress.update(task, completed=True, description="[green]Security test completed!")
-#             return results
-#         except Exception as e:
-#             progress.update(task, completed=True, description="[red]Security test failed!")
-#             console.print(f"[red]Error: {str(e)}[/red]")
-#             return None
 
 def display_attack_results(results: Dict[str, Any]):
     """Display the attack results in a formatted manner"""
