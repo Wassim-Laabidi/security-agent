@@ -2,18 +2,12 @@ import streamlit as st
 import requests
 import json
 import time
+import datetime
 from pathlib import Path
+import io
 
 # FastAPI backend URL
 BACKEND_URL = "http://localhost:8000"
-
-# Predefined testing goals
-PREDEFINED_GOALS = [
-    "Scan the local network interfaces and identify all open TCP ports on the system",
-    "Enumerate all user accounts",
-    "Find and exploit a SQL injection vulnerability",
-    "Attempt privilege escalation",
-]
 
 def login():
     """Handle user authentication"""
@@ -48,6 +42,58 @@ def run_task_based_test(config_file, task_id, verbose):
     response = requests.post(f"{BACKEND_URL}/run-task", files=files, data=payload, headers=headers)
     return response.json()
 
+def create_pdf_report(result, test_type, test_name):
+    """Create a PDF report from the test results (simplified placeholder)"""
+    # In a real implementation, you would use a PDF library like ReportLab or PyPDF2
+    # For this example, we'll create a structured text report that could be converted to PDF
+    
+    now = datetime.datetime.now()
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H:%M:%S")
+    
+    report_content = f"""
+# Security Test Report
+- Test Type: {test_type}
+- Test Name: {test_name}
+- Date: {date_str}
+- Time: {time_str}
+- Time Elapsed: {result.get('elapsed_time', 'N/A')} seconds
+
+## Test Output
+```
+{result.get('output', 'No output available')}
+```
+
+## Summary
+Status: {'Successful' if result.get('success', False) else 'Failed'}
+
+## Errors (if any)
+```
+{result.get('error', 'No errors')}
+```
+"""
+    
+    # In a real implementation, you would convert this to PDF
+    # For now, we'll just return the text that could be converted to PDF
+    return report_content
+
+def get_predefined_goals():
+    """Fetch predefined attack goals from the backend"""
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state['token']}"}
+        response = requests.get(f"{BACKEND_URL}/attack-goals", headers=headers)
+        if response.status_code == 200:
+            return response.json().get("goals", [])
+        return []
+    except:
+        # Fallback to these goals if API fails
+        return [
+            "Scan the local network interfaces and identify all open TCP ports on the system",
+            "Enumerate all user accounts",
+            "Find and exploit a SQL injection vulnerability",
+            "Attempt privilege escalation"
+        ]
+
 def main_dashboard():
     """Main dashboard with tabs for goal-based and task-based testing"""
     st.title("Security Testing Agent Dashboard")
@@ -59,9 +105,13 @@ def main_dashboard():
     with tab1:
         st.header("Goal-Based Testing")
         goal = st.text_input("Enter security testing goal", value="")
-        predefined_goal = st.selectbox("Or select a predefined goal", ["Custom"] + PREDEFINED_GOALS)
+        
+        # Get predefined goals from the backend
+        predefined_goals = get_predefined_goals()
+        predefined_goal = st.selectbox("Or select a predefined goal", ["Custom"] + predefined_goals)
         if predefined_goal != "Custom":
             goal = predefined_goal
+            
         verbose = st.checkbox("Verbose Output", value=False)
         max_steps = st.number_input("Max Steps (optional)", min_value=1, value=15, step=1)
         if st.button("Run Goal-Based Test"):
@@ -69,55 +119,110 @@ def main_dashboard():
                 with st.spinner("Running security test..."):
                     result = run_goal_based_test(goal, verbose, max_steps)
                     st.session_state["result"] = result
+                    st.session_state["test_type"] = "Goal-Based Test"
+                    st.session_state["test_name"] = goal
                     st.success("Test completed!")
+                    
+                    # Generate PDF report
+                    report_content = create_pdf_report(result, "Goal-Based Test", goal)
+                    st.session_state["report_content"] = report_content
+                    st.info("PDF report is ready for download!")
             else:
                 st.error("Please enter or select a goal")
 
     # Task-Based Testing Tab
     with tab2:
         st.header("Task-Based Testing")
+        
+        # Just allow file upload - the main.py will handle task list management
         config_file = st.file_uploader("Upload attack_tasks.json", type=["json"])
+        
         if config_file:
-            config_data = json.load(config_file)
-            task_ids = [task["id"] for task in config_data.get("tasks", [])] + ["Run All"]
-            task_id = st.selectbox("Select Task ID (or Run All)", task_ids)
-            verbose = st.checkbox("Verbose Output (Task)", value=False)
-            if st.button("Run Task-Based Test"):
-                with st.spinner("Running task-based test..."):
-                    result = run_task_based_test(config_file, task_id if task_id != "Run All" else "", verbose)
-                    st.session_state["result"] = result
-                    st.success("Test completed!")
+            try:
+                config_file.seek(0)
+                config_data = json.load(config_file)
+                config_file.seek(0)  # Reset file position for later use
+                
+                # Extract task IDs from the config
+                task_ids = [task["id"] for task in config_data.get("tasks", [])] + ["Run All"]
+                task_id = st.selectbox("Select Task ID (or Run All)", task_ids)
+                verbose = st.checkbox("Verbose Output (Task)", value=False)
+                
+                if st.button("Run Task-Based Test"):
+                    with st.spinner("Running task-based test..."):
+                        result = run_task_based_test(config_file, task_id if task_id != "Run All" else "", verbose)
+                        st.session_state["result"] = result
+                        
+                        # Set test info for report
+                        test_name = task_id if task_id != "Run All" else "All Tasks"
+                        st.session_state["test_type"] = "Task-Based Test"
+                        st.session_state["test_name"] = test_name
+                        
+                        st.success("Test completed!")
+                        
+                        # Generate PDF report
+                        report_content = create_pdf_report(result, "Task-Based Test", test_name)
+                        st.session_state["report_content"] = report_content
+                        st.info("PDF report is ready for download!")
+            except json.JSONDecodeError:
+                st.error("Invalid JSON file. Please upload a valid configuration.")
         else:
-            st.warning("Please upload a configuration file")
+            st.info("Please upload a task configuration file")
 
     # Reports Tab
     with tab3:
         st.header("Test Reports")
-        headers = {"Authorization": f"Bearer {st.session_state['token']}"}
-        response = requests.get(f"{BACKEND_URL}/reports", headers=headers)
-        reports = response.json().get("reports", [])
-        if reports:
-            st.table(reports)
-            report_id = st.selectbox("Select Report to Download", [r["id"] for r in reports])
-            if st.button("Download PDF Report"):
-                response = requests.get(f"{BACKEND_URL}/report/{report_id}/pdf", headers=headers)
-                st.download_button(
-                    label="Download PDF",
-                    data=response.content,
-                    file_name=f"report_{report_id}.pdf",
-                    mime="application/pdf"
-                )
-        else:
-            st.info("No reports available")
+        
+        # Show download button for the current report if available
+        if "report_content" in st.session_state:
+            st.success("Your test report is ready!")
+            test_type = st.session_state.get("test_type", "Security Test")
+            test_name = st.session_state.get("test_name", "Unknown")
+            
+            # In a real implementation, this would be a PDF
+            # For now, we provide a text file that could be converted to PDF
+            st.download_button(
+                label="Download PDF Report",
+                data=st.session_state["report_content"],
+                file_name=f"{test_type}_{test_name}_report.md",
+                mime="text/markdown"
+            )
+            
+            # Show report preview
+            with st.expander("Preview Report"):
+                st.markdown(st.session_state["report_content"])
+        
+        # List available reports from the backend
+        try:
+            headers = {"Authorization": f"Bearer {st.session_state['token']}"}
+            response = requests.get(f"{BACKEND_URL}/reports", headers=headers)
+            reports = response.json().get("reports", [])
+            if reports:
+                st.subheader("Available Reports")
+                st.dataframe(reports)
+                report_id = st.selectbox("Select Report to Download", [r["id"] for r in reports])
+                if st.button("Download Selected Report"):
+                    response = requests.get(f"{BACKEND_URL}/report/{report_id}/pdf", headers=headers)
+                    st.download_button(
+                        label="Download PDF",
+                        data=response.content,
+                        file_name=f"report_{report_id}.pdf",
+                        mime="application/pdf"
+                    )
+            else:
+                st.info("No previous reports available from the server")
+        except Exception as e:
+            st.error(f"Error fetching reports: {str(e)}")
 
     # Real-Time Output Panel
     if "result" in st.session_state:
         st.header("Test Results")
-        with st.expander("View Detailed Results"):
+        with st.expander("View Detailed Results", expanded=True):
             st.json(st.session_state["result"])
 
 def main():
     """Main entry point for the Streamlit app"""
+    # Initialize session state
     if "token" not in st.session_state:
         login()
     else:

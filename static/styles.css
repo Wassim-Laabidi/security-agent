@@ -1,0 +1,65 @@
+/* Main theme styles */
+.terminal-output {
+    background-color: #0e1117;
+    color: #f8f8f2;
+    padding: 15px;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    height: 500px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #2d3748;
+}
+
+.success {
+    color: #50fa7b;
+    font-weight: bold;
+}
+
+.error {
+    color: #ff5555;
+    font-weight: bold;
+}
+
+.warning {
+    color: #f1fa8c;
+    font-weight: bold;
+}
+
+.info {
+    color: #8be9fd;
+}
+
+.dashboard-title {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #bd93f9;
+}
+
+.main-section {
+    background-color: #1e1e2e;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+/* Button styles */
+.stButton>button {
+    background-color: #6272a4;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    transition: background-color 0.3s;
+}
+
+.stButton>button:hover {
+    background-color: #8be9fd;
+    color: #282a36;
+}
+
+.download-button {
+    background-color: #50fa7b;
+    color: #282a36;
+}
