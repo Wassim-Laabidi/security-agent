@@ -11,3 +11,4 @@ anthropic>=0.8.0
 fastapi>=0.104.1
 uvicorn>=0.24.0
 tenacity>=8.2.3
+streamlit
