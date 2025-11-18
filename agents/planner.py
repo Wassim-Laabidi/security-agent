@@ -26,7 +26,6 @@ class PlannerAgent:
         Returns:
             Dictionary containing the generated plan with steps, verification, and goal status
         """
-        # Validate target reachability
         try:
             socket.gethostbyname(SSH_HOST)
         except socket.gaierror:
@@ -39,10 +38,8 @@ class PlannerAgent:
         
         prompt = get_planner_prompt(context, attack_goal)
         
-        # Invoke the model with the constructed prompt
         response = self.model.invoke([HumanMessage(content=prompt)])
         
-        # Extract and parse JSON response
         try:
             # Try to extract JSON from various formats
             content = response.content
@@ -89,19 +86,15 @@ class PlannerAgent:
         """
         required_keys = ["steps", "goal_verification", "goal_reached"]
         
-        # Check that all required keys are present
         if not all(key in plan for key in required_keys):
             return False
             
-        # Check that steps is a list
         if not isinstance(plan["steps"], list):
             return False
             
-        # Check that goal_reached is a boolean
         if not isinstance(plan["goal_reached"], bool):
             return False
             
-        # Check that goal_verification is a string
         if not isinstance(plan["goal_verification"], str):
             return False
             

@@ -21,13 +21,11 @@ class CoreAgent:
         self.ssh_client = SSHClient()
         self.context_manager = ContextManager()
         
-        # Initialize sub-agents
         self.planner = PlannerAgent()
         self.interpreter = InterpreterAgent()
         self.summarizer = SummarizerAgent() if USE_SUMMARIZER else None
         self.extractor = ExtractorAgent()
         
-        # State tracking
         self.current_step = 0
         self.goal_reached = False
         self.attack_in_progress = False
@@ -42,12 +40,10 @@ class CoreAgent:
         Returns:
             True if attack was started successfully, False otherwise
         """
-        # Establish SSH connection
         if not self.ssh_client.connect():
             print("Failed to establish SSH connection")
             return False
         
-        # Initialize attack context
         self.context_manager.set_attack_goal(goal)
         self.current_step = 0
         self.goal_reached = False
@@ -73,19 +69,15 @@ class CoreAgent:
             self.attack_in_progress = False
             return {"message": "Maximum attack steps reached, attack terminated"}
         
-        # Get the current context
         context = self.context_manager.get_full_context()
         
-        # If using summarizer and context is getting large, summarize it
         if self.summarizer and len(context) > 8000:
             summary = self.summarizer.invoke(context)
             context = self.context_manager.get_summarized_context(summary)
         
-        # Get the next plan from the planner
         plan = self.planner.invoke(context, self.context_manager.attack_goal)
         self.context_manager.set_current_plan(plan)
         
-        # Check if goal is reached according to the planner
         if plan.get("goal_reached", False):
             self.goal_reached = True
             self.attack_in_progress = False
@@ -95,16 +87,13 @@ class CoreAgent:
                 "step": self.current_step
             }
         
-        # Get the first step from the plan
         if not plan.get("steps"):
             return {"error": "No steps in the attack plan"}
         
         step = plan["steps"][0]
         
-        # Convert the step to a command
         command = self.interpreter.invoke(context, step)
         
-        # Execute the command
         output, error = self.ssh_client.execute_command(command)
         
         if error:
@@ -113,7 +102,6 @@ class CoreAgent:
         else:
             result = output
         
-        # Record the step
         step_data = {
             "command": command,
             "output": result,
@@ -148,17 +136,13 @@ class CoreAgent:
             step_result = self.execute_next_step()
             steps_executed += 1
             
-            # Print progress
             print(f"Step {self.current_step}: {step_result.get('command', 'N/A')}")
             
-            # Optional delay between steps
             time.sleep(1)
         
-        # Get the final attack summary and findings
         context = self.context_manager.get_full_context()
         findings = self.extractor.invoke(context)
         
-        # Add vulnerabilities to context
         for vuln in findings.get("vulnerabilities", []):
             self.context_manager.add_vulnerability(vuln)
         
@@ -184,7 +168,6 @@ class CoreAgent:
         
         self.attack_in_progress = False
         
-        # Close SSH connection
         self.ssh_client.close()
         
         return {

@@ -25,20 +25,15 @@ class InterpreterAgent:
         """
         prompt = get_interpreter_prompt(context, step)
         
-        # Invoke the model with the constructed prompt
         response = self.model.invoke([HumanMessage(content=prompt)])
         
-        # Extract the command from the response
         command = response.content.strip()
         
-        # Clean up the command if it's wrapped in quotes or code blocks
         if command.startswith("```") and command.endswith("```"):
             command = command.split("```")[1].strip()
         
-        # Remove any leading/trailing quotes
         command = command.strip('"\'')
         
-        # Basic command validation and sanitization
         command = self._sanitize_command(command)
         
         return command
@@ -53,16 +48,13 @@ class InterpreterAgent:
         Returns:
             Sanitized command
         """
-        # Remove any multi-line comments or explanations
         if "\n" in command:
             # Take only the first line if there are multiple lines
             command = command.split("\n")[0].strip()
         
-        # Strip any leftover markdown or formatting
         if command.startswith("$ "):
             command = command[2:]
         
-        # Don't allow certain dangerous commands that could break the system
         dangerous_commands = [
             "rm -rf /", 
             "rm -rf /*", 

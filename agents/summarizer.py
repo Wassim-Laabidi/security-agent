@@ -24,10 +24,8 @@ class SummarizerAgent:
         """
         prompt = get_summarizer_prompt(context)
         
-        # Invoke the model with the constructed prompt
         response = self.model.invoke([HumanMessage(content=prompt)])
         
-        # Extract the summary from the response
         summary = response.content.strip()
         
         return summary

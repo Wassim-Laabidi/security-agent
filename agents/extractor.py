@@ -26,10 +26,8 @@ class ExtractorAgent:
         """
         prompt = get_extractor_prompt(context)
         
-        # Invoke the model with the constructed prompt
         response = self.model.invoke([HumanMessage(content=prompt)])
         
-        # Extract and parse JSON response
         try:
             # Try to extract JSON from various formats
             content = response.content
@@ -67,15 +65,12 @@ class ExtractorAgent:
         Returns:
             True if the findings are valid, False otherwise
         """
-        # Check that the findings have the required keys
         if "vulnerabilities" not in findings or "summary" not in findings:
             return False
         
-        # Check that vulnerabilities is a list
         if not isinstance(findings["vulnerabilities"], list):
             return False
         
-        # Check that each vulnerability has the required fields
         for vuln in findings["vulnerabilities"]:
             required_fields = ["type", "description", "evidence", "severity", "remediation"]
             if not all(field in vuln for field in required_fields):
